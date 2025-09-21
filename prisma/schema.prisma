@@ -13,4 +13,101 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Auth.js models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Auth.js relations
+  accounts      Account[]
+  sessions      Session[]
+  
+  // App relations
+  journalEntries JournalEntry[]
+  moodLogs      MoodLog[]
+  aiInsights    AIInsight[]
+  recommendations Recommendation[]
+}
+
+model JournalEntry {
+  id            Int       @id @default(autoincrement())
+  title         String?
+  entryText     String    @db.Text
+  mood          String?   // User's selected mood
+  sentiment     String?   // AI-analyzed sentiment
+  keywords      String[]  // Extracted keywords
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id])
+  userId        String
+  pineconeId    String?   // Reference to Pinecone vector
+  
+  // Relations
+  aiInsights    AIInsight[]
+}
+
+model MoodLog {
+  id          Int       @id @default(autoincrement())
+  mood        String    // "happy", "sad", "anxious", "calm", "excited", etc.
+  intensity   Int       // 1-10 scale
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+}
+
+model AIInsight {
+  id            Int           @id @default(autoincrement())
+  type          String        // "sentiment", "pattern", "recommendation"
+  insight       String        @db.Text
+  confidence    Float         // 0.0 to 1.0
+  createdAt     DateTime      @default(now())
+  user          User          @relation(fields: [userId], references: [id])
+  userId        String
+  journalEntry  JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  journalEntryId Int?
+}
+
+model Recommendation {
+  id          Int      @id @default(autoincrement())
+  type        String   // "music", "activity", "exercise", "meditation"
+  title       String
+  description String   @db.Text
+  url         String?
+  category    String   // "stress-relief", "motivation", "sleep", etc.
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+}
