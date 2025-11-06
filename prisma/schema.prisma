@@ -52,6 +52,7 @@ model Journal {
   createdAt DateTime   @default(now())
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   moodRecord MoodRecord?
+  vectorId String?
 }
 
 // ===== Mood Records =====
@@ -61,6 +62,7 @@ model MoodRecord {
   journalId      String?           @unique
   moodLabel      String
   moodScore      Float?
+  moodCategory   String?
   createdAt      DateTime          @default(now())
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   journal        Journal?          @relation(fields: [journalId], references: [id], onDelete: Cascade)
