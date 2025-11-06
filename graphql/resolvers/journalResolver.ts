@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { createEmbedding } from "@/lib/openai";
+import { createEmbedding } from "@/lib/gemini";
 import { pineconeIndex } from "@/lib/pinecone";
 
 export const journalResolvers = {

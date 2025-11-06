@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { analyzeMood } from "@/lib/openai";
+import { analyzeMood } from "@/lib/gemini";
 
 export const recommendationResolvers = {
   Query: {
