@@ -1,4 +1,4 @@
-// TMDB API service for fetching movies based on mood
+// TMDB API service for fetching movies based on mood (v4 Bearer Auth)
 
 interface TMDBMovie {
   id: number;
@@ -23,98 +23,95 @@ interface TMDBDiscoverResponse {
 }
 
 /**
- * Maps mood categories to TMDB genre IDs and keywords
- * Genre IDs: 28=Action, 35=Comedy, 18=Drama, 27=Horror, 10749=Romance, 99=Documentary, 16=Animation
+ * Maps mood labels to TMDB genre IDs
+ * Genre IDs:
+ * 28=Action, 35=Comedy, 18=Drama, 53=Thriller,
+ * 10749=Romance, 99=Documentary, 16=Animation
  */
-function getMoodMovieParams(moodLabel: string, moodCategory: string): {
+function getMoodMovieParams(moodLabel: string): {
   genreIds?: number[];
-  keywords?: string;
   sortBy?: string;
 } {
-  const moodLower = moodLabel.toLowerCase();
+  const mood = moodLabel.toLowerCase();
 
-  const params: Record<string, { genreIds?: number[]; keywords?: string; sortBy?: string }> = {
+  const map: Record<string, { genreIds?: number[]; sortBy?: string }> = {
     happy: {
-      genreIds: [35, 16], // Comedy, Animation
-      keywords: "uplifting, feel-good, comedy",
+      genreIds: [35, 16],
       sortBy: "popularity.desc",
     },
     sad: {
-      genreIds: [18, 10749], // Drama, Romance
-      keywords: "emotional, drama, heartwarming",
+      genreIds: [18, 10749],
       sortBy: "popularity.desc",
     },
     angry: {
-      genreIds: [28, 53], // Action, Thriller
-      keywords: "action, intense, adrenaline",
+      genreIds: [28, 53],
       sortBy: "popularity.desc",
     },
     stressed: {
-      genreIds: [35, 99], // Comedy, Documentary
-      keywords: "light-hearted, relaxing, calm",
+      genreIds: [35, 99],
       sortBy: "popularity.desc",
     },
     calm: {
-      genreIds: [99, 18], // Documentary, Drama
-      keywords: "peaceful, nature, mindfulness",
+      genreIds: [99, 18],
       sortBy: "popularity.desc",
     },
     neutral: {
-      sortBy: "popularity.desc", // Just get popular movies
+      sortBy: "popularity.desc",
     },
   };
 
-  return params[moodLower] || params.neutral;
+  return map[mood] || map.neutral;
 }
 
 /**
- * Discover movies from TMDB based on mood
+ * Fetch movies from TMDB based on mood
  */
 export async function getMoviesByMood(
   moodLabel: string,
-  moodCategory: string,
   maxResults: number = 10
 ): Promise<TMDBMovie[]> {
-  const apiKey = process.env.TMDB_API_KEY;
-  if (!apiKey) {
-    throw new Error("TMDB_API_KEY is not set in environment variables");
+  const token = process.env.TMDB_ACCESS_TOKEN;
+
+  if (!token) {
+    throw new Error("TMDB_ACCESS_TOKEN is not set in environment variables");
   }
 
-  const params = getMoodMovieParams(moodLabel, moodCategory);
+  const params = getMoodMovieParams(moodLabel);
   const url = new URL("https://api.themoviedb.org/3/discover/movie");
-  
-  url.searchParams.append("api_key", apiKey);
-  url.searchParams.append("language", "en-US");
-  url.searchParams.append("sort_by", params.sortBy || "popularity.desc");
-  url.searchParams.append("page", "1");
-  
-  if (params.genreIds && params.genreIds.length > 0) {
-    url.searchParams.append("with_genres", params.genreIds.join(","));
+
+  url.searchParams.set("language", "en-US");
+  url.searchParams.set("page", "1");
+  url.searchParams.set("sort_by", params.sortBy || "popularity.desc");
+
+  if (params.genreIds?.length) {
+    url.searchParams.set("with_genres", params.genreIds.join(","));
   }
 
-  try {
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`TMDB API error: ${response.statusText}`);
-    }
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
 
-    const data: TMDBDiscoverResponse = await response.json();
-
-    return data.results
-      .slice(0, maxResults)
-      .map((movie) => ({
-        id: movie.id,
-        title: movie.title,
-        overview: movie.overview,
-        posterPath: movie.poster_path
-          ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-          : null,
-        releaseDate: movie.release_date,
-        voteAverage: movie.vote_average,
-        genreIds: movie.genre_ids,
-      }));
-  } catch (error) {
-    console.error("Error fetching TMDB movies:", error);
-    throw error;
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `TMDB API error: ${response.status} ${errorText}`
+    );
   }
+
+  const data: TMDBDiscoverResponse = await response.json();
+
+  return data.results.slice(0, maxResults).map((movie) => ({
+    id: movie.id,
+    title: movie.title,
+    overview: movie.overview,
+    posterPath: movie.poster_path
+      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+      : null,
+    releaseDate: movie.release_date,
+    voteAverage: movie.vote_average,
+    genreIds: movie.genre_ids,
+  }));
 }
