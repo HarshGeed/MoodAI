@@ -46,6 +46,7 @@ export const recommendationTypeDefs = gql`
   }
 
   extend type Mutation {
+    generateRecommendation(moodRecordId: String!): Recommendation
     generateMoodBasedRecommendations(userId: String!): MoodBasedRecommendations
   }
 `;

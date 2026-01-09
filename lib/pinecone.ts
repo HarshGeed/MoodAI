@@ -1,7 +1,19 @@
 import { Pinecone } from "@pinecone-database/pinecone";
 
-export const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
+if (!process.env.PINECONE_API_KEY) {
+  throw new Error("PINECONE_API_KEY is missing");
+}
+
+if (!process.env.PINECONE_INDEX) {
+  throw new Error("PINECONE_INDEX is missing");
+}
+
+const pinecone = new Pinecone({
+  apiKey: process.env.PINECONE_API_KEY,
 });
 
-export const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX!);
+const pineconeIndex = pinecone.Index(
+  process.env.PINECONE_INDEX
+);
+
+export { pinecone, pineconeIndex };

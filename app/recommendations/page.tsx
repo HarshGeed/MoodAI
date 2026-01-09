@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import Sidebar from "@/components/Sidebar";
 
 interface YouTubeVideo {
   videoId: string;
@@ -138,33 +138,15 @@ export default function RecommendationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600">
-                MoodAI
-              </Link>
-              <span className="text-gray-400">|</span>
-              <h1 className="text-xl font-semibold text-gray-700">Recommendations</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-700">Welcome, {session.user?.name}</span>
-              <button
-                onClick={() => signOut()}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <Sidebar userName={session.user?.name || null} />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex-1 flex flex-col overflow-hidden">
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-6">
         {loading && (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
@@ -345,7 +327,8 @@ export default function RecommendationsPage() {
             </section>
           </>
         )}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
