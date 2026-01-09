@@ -84,9 +84,12 @@ export default function Home() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Recommendations</h2>
             <p className="text-gray-600 mb-4">Get personalized suggestions</p>
-            <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors">
+            <Link
+              href="/recommendations"
+              className="block w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors text-center"
+            >
               View Recommendations
-            </button>
+            </Link>
           </div>
         </div>
       </main>

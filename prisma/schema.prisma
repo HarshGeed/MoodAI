@@ -14,6 +14,7 @@ model User {
   id              String            @id @default(cuid())
   name            String?
   email           String?           @unique
+  emailVerified   DateTime?         // Required by NextAuth
   password        String?           // hashed password for credentials login
   image           String?
   accounts        Account[]
