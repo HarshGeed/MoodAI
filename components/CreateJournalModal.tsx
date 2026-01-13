@@ -11,9 +11,10 @@ interface CreateJournalModalProps {
 }
 
 const CREATE_JOURNAL = `
-  mutation CreateJournal($userId: String!, $content: String!) {
-    createJournal(userId: $userId, content: $content) {
+  mutation CreateJournal($userId: String!, $heading: String, $content: String!) {
+    createJournal(userId: $userId, heading: $heading, content: $content) {
       id
+      heading
       content
       createdAt
     }
@@ -37,6 +38,7 @@ export default function CreateJournalModal({
   userId,
   onJournalCreated,
 }: CreateJournalModalProps) {
+  const [heading, setHeading] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,11 @@ export default function CreateJournalModal({
         },
         body: JSON.stringify({
           query: CREATE_JOURNAL,
-          variables: { userId, content: content.trim() },
+          variables: { 
+            userId, 
+            heading: heading.trim() || null, 
+            content: content.trim() 
+          },
         }),
       });
 
@@ -87,6 +93,7 @@ export default function CreateJournalModal({
         console.error("Mood analysis failed silently:", moodError);
       }
 
+      setHeading("");
       setContent("");
       onJournalCreated();
       onClose();
@@ -102,17 +109,19 @@ export default function CreateJournalModal({
       isOpen={isOpen}
       onRequestClose={onClose}
       contentLabel="Create Journal"
-      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden outline-none"
-      overlayClassName="fixed inset-0 bg-black bg-opacity-50 z-50"
+      className="modal-content"
+      overlayClassName="modal-overlay"
       ariaHideApp={false}
+      closeTimeoutMS={200}
     >
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">New Journal Entry</h2>
+      <div className="flex flex-col h-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+        {/* Header - Fixed */}
+        <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-50 to-blue-50 flex-shrink-0">
+          <h2 className="text-2xl font-bold text-gray-900">New Journal Entry</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            aria-label="Close modal"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -125,30 +134,55 @@ export default function CreateJournalModal({
           </button>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-          <div className="flex-1 p-6 overflow-y-auto">
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="What's on your mind? Write about your day, thoughts, feelings..."
-              className="w-full h-full resize-none border-none outline-none text-gray-900 placeholder-gray-400"
-              autoFocus
-            />
+        {/* Form wrapper for proper submission */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-6">
+              {/* Heading Input */}
+              <div>
+                <label htmlFor="heading" className="block text-sm font-medium text-gray-700 mb-2">
+                  Heading (optional)
+                </label>
+                <input
+                  id="heading"
+                  type="text"
+                  value={heading}
+                  onChange={(e) => setHeading(e.target.value)}
+                  placeholder="Give your journal entry a title..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white text-gray-900 placeholder-gray-400 transition-all"
+                />
+              </div>
+
+              {/* Content Textarea */}
+              <div>
+                <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                  Content
+                </label>
+                <textarea
+                  id="content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="What's on your mind? Write about your day, thoughts, feelings..."
+                  className="w-full h-[500px] p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-y bg-white text-gray-900 placeholder-gray-400 text-base leading-relaxed"
+                  autoFocus
+                />
+              </div>
+
+              {error && (
+                <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {error && (
-            <div className="px-6 py-2 bg-red-50 border-t border-red-200">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end space-x-3">
+          {/* Footer - Fixed */}
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end space-x-3 bg-gray-50 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-5 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
               disabled={loading}
             >
               Cancel
@@ -156,13 +190,73 @@ export default function CreateJournalModal({
             <button
               type="submit"
               disabled={loading || !content.trim()}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg hover:shadow-xl disabled:shadow-none"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </span>
+              ) : (
+                "Save Entry"
+              )}
             </button>
           </div>
         </form>
       </div>
+
+      <style jsx global>{`
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(4px);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          opacity: 0;
+          transition: opacity 200ms ease-in-out;
+        }
+
+        .modal-overlay.ReactModal__Overlay--after-open {
+          opacity: 1;
+        }
+
+        .modal-overlay.ReactModal__Overlay--before-close {
+          opacity: 0;
+        }
+
+        .modal-content {
+          position: relative;
+          width: 100%;
+          max-width: 48rem;
+          max-height: 90vh;
+          outline: none;
+          opacity: 0;
+          transform: scale(0.95) translateY(-10px);
+          transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .modal-content.ReactModal__Content--after-open {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+
+        .modal-content.ReactModal__Content--before-close {
+          opacity: 0;
+          transform: scale(0.95) translateY(-10px);
+        }
+      `}</style>
     </Modal>
   );
 }

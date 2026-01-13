@@ -10,6 +10,7 @@ import ViewJournalModal from "@/components/ViewJournalModal";
 
 interface Journal {
   id: string;
+  heading: string | null;
   content: string;
   mood: string | null;
   createdAt: string;
@@ -19,6 +20,7 @@ const GET_JOURNALS = `
   query GetJournalsByUser($userId: String!) {
     getJournalsByUser(userId: $userId) {
       id
+      heading
       content
       mood
       createdAt
@@ -176,6 +178,7 @@ export default function Home() {
                 <JournalCard
                   key={journal.id}
                   id={journal.id}
+                  heading={journal.heading}
                   content={journal.content}
                   createdAt={journal.createdAt}
                   mood={journal.mood}

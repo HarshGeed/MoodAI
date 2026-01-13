@@ -4,6 +4,7 @@ export const journalTypeDefs = gql`
   type Journal {
     id: ID!
     userId: String!
+    heading: String
     content: String!
     mood: String
     vectorId: String
@@ -17,6 +18,6 @@ export const journalTypeDefs = gql`
   }
 
   extend type Mutation {
-    createJournal(userId: String!, content: String!): Journal
+    createJournal(userId: String!, heading: String, content: String!): Journal
   }
 `;

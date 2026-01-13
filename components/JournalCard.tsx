@@ -2,15 +2,16 @@
 
 interface JournalCardProps {
   id: string;
+  heading?: string | null;
   content: string;
   createdAt: string;
   mood?: string | null;
   onClick: () => void;
 }
 
-export default function JournalCard({ id, content, createdAt, mood, onClick }: JournalCardProps) {
-  // Extract headline (first line or first 50 chars)
-  const headline = content.split("\n")[0] || content.substring(0, 50);
+export default function JournalCard({ id, heading, content, createdAt, mood, onClick }: JournalCardProps) {
+  // Use heading if available, otherwise extract headline from content
+  const headline = heading || content.split("\n")[0] || content.substring(0, 50);
   const preview = content.length > 100 ? content.substring(0, 100) + "..." : content;
 
   // Format date

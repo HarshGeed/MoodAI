@@ -12,9 +12,11 @@ export const journalResolvers = {
   },
 
   Mutation: {
-    createJournal: async (_: any, { userId, content }: any) => {
+    createJournal: async (_: any, { userId, heading, content }: any) => {
       // Save journal in DB
-      const journal = await prisma.journal.create({ data: { userId, content } });
+      const journal = await prisma.journal.create({ 
+        data: { userId, heading: heading || null, content } 
+      });
 
       // Generate embedding and store in Pinecone (if configured)
       if (pineconeIndex) {
@@ -42,7 +44,7 @@ export const journalResolvers = {
           console.error("Error storing journal in Pinecone:", error);
         }
       } else {
-        console.warn("⚠️ Pinecone is not configured. PINECONE_INDEX environment variable is missing.");
+        console.warn("Pinecone is not configured. PINECONE_INDEX environment variable is missing.");
       }
 
       return journal;
