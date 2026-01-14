@@ -1,4 +1,5 @@
 // YouTube API service for fetching videos and songs based on mood
+import { upsertVector } from "./pinecone";
 
 interface YouTubeVideo {
   videoId: string;
@@ -126,4 +127,31 @@ export async function getYouTubeRecommendationsByMood(
   const songs = await searchYouTubeVideos(songQueries[0], 5);
 
   return { videos, songs };
+}
+
+/**
+ * Store YouTube video/song metadata as embeddings in Pinecone
+ */
+export async function storeYouTubeVideoEmbedding(
+  video: YouTubeVideo,
+  type: "video" | "song"
+): Promise<void> {
+  // Create a text representation combining title, description, and metadata
+  const textContent = `${video.title}. ${video.description}. Channel: ${video.channelTitle}`;
+  
+  const vectorId = `youtube-${type}-${video.videoId}`;
+  
+  await upsertVector(
+    vectorId,
+    textContent,
+    {
+      source: "youtube",
+      type,
+      videoId: video.videoId,
+      title: video.title,
+      channelTitle: video.channelTitle,
+      thumbnail: video.thumbnail,
+      publishedAt: video.publishedAt,
+    }
+  );
 }

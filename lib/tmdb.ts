@@ -1,4 +1,5 @@
 // TMDB API service for fetching movies based on mood (v4 Bearer Auth)
+import { upsertVector } from "./pinecone";
 
 interface TMDBMovie {
   id: number;
@@ -114,4 +115,29 @@ export async function getMoviesByMood(
     voteAverage: movie.vote_average,
     genreIds: movie.genre_ids,
   }));
+}
+
+/**
+ * Store movie metadata as embeddings in Pinecone
+ */
+export async function storeMovieEmbedding(movie: TMDBMovie): Promise<void> {
+  // Create a text representation combining title, overview, and release date
+  const textContent = `${movie.title}. ${movie.overview}. Released: ${movie.releaseDate}`;
+  
+  const vectorId = `tmdb-movie-${movie.id}`;
+  
+  await upsertVector(
+    vectorId,
+    textContent,
+    {
+      source: "tmdb",
+      type: "movie",
+      movieId: movie.id,
+      title: movie.title,
+      releaseDate: movie.releaseDate,
+      voteAverage: movie.voteAverage,
+      posterPath: movie.posterPath,
+      genreIds: movie.genreIds,
+    }
+  );
 }
