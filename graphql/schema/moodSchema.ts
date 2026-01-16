@@ -16,6 +16,7 @@ export const moodTypeDefs = gql`
 
   extend type Query {
     getMoodHistory(userId: String!): [MoodRecord!]
+    getCurrentUserMoodHistory: [MoodRecord!]
   }
 
   extend type Mutation {

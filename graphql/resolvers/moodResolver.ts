@@ -1,13 +1,33 @@
 import { prisma } from "@/lib/prisma";
 import { analyzeMood } from "@/lib/gemini";
+import { auth } from "@/auth";
 
 export const moodResolvers = {
   Query: {
     getMoodHistory: async (_: any, { userId }: any) =>
       prisma.moodRecord.findMany({
         where: { userId },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "asc" },
       }),
+    getCurrentUserMoodHistory: async () => {
+      const session = await auth();
+      if (!session?.user?.email) {
+        throw new Error("Not authenticated");
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      return prisma.moodRecord.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "asc" },
+      });
+    },
   },
 
   Mutation: {

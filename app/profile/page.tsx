@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
+import MoodChart from "@/components/MoodChart";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -39,7 +40,8 @@ export default function ProfilePage() {
 
         {/* Profile Content */}
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Profile Info Card */}
             <div className="bg-white rounded-lg shadow-md p-8">
               <div className="flex items-center space-x-6 mb-8">
                 {session.user?.image ? (
@@ -73,6 +75,9 @@ export default function ProfilePage() {
                 </dl>
               </div>
             </div>
+
+            {/* Mood Chart */}
+            <MoodChart />
           </div>
         </main>
       </div>
