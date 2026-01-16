@@ -7,9 +7,10 @@ export default auth((req) => {
 
   // Protect all routes except public ones
   const isPublicRoute = nextUrl.pathname.startsWith("/login") || 
-                       nextUrl.pathname.startsWith("/signup") ||
+                       nextUrl.pathname.startsWith("/register") ||
                        nextUrl.pathname.startsWith("/api/auth") ||
-                       nextUrl.pathname.startsWith("/_next")
+                       nextUrl.pathname.startsWith("/_next") ||
+                       nextUrl.pathname === "/favicon.ico"
 
   if (!isLoggedIn && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", nextUrl));

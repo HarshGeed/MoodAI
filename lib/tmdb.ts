@@ -69,7 +69,7 @@ function getMoodMovieParams(moodLabel: string): {
  */
 export async function getMoviesByMood(
   moodLabel: string,
-  maxResults: number = 10
+  maxResults: number = 20
 ): Promise<TMDBMovie[]> {
   const token = process.env.TMDB_ACCESS_TOKEN;
 
@@ -119,25 +119,43 @@ export async function getMoviesByMood(
 
 /**
  * Store movie metadata as embeddings in Pinecone
+ * Uses descriptive text (title + overview + genres), not IDs
  */
 export async function storeMovieEmbedding(movie: TMDBMovie): Promise<void> {
-  // Create a text representation combining title, overview, and release date
-  const textContent = `${movie.title}. ${movie.overview}. Released: ${movie.releaseDate}`;
+  // Genre ID to name mapping
+  const genreNames: Record<number, string> = {
+    28: "Action", 35: "Comedy", 18: "Drama", 53: "Thriller",
+    10749: "Romance", 99: "Documentary", 16: "Animation",
+    27: "Horror", 10402: "Music", 9648: "Mystery", 10751: "Family",
+  };
+
+  // Create descriptive text for embedding (NOT ID-based)
+  const genreLabels = movie.genreIds
+    .map((id) => genreNames[id] || `Genre${id}`)
+    .join(", ");
+  
+  const textContent = `${movie.title}. ${movie.overview}. Genres: ${genreLabels}. Released: ${movie.releaseDate}`;
   
   const vectorId = `tmdb-movie-${movie.id}`;
   
-  await upsertVector(
-    vectorId,
-    textContent,
-    {
-      source: "tmdb",
-      type: "movie",
-      movieId: movie.id,
-      title: movie.title,
-      releaseDate: movie.releaseDate,
-      voteAverage: movie.voteAverage,
-      posterPath: movie.posterPath,
-      genreIds: movie.genreIds,
-    }
-  );
+  try {
+    await upsertVector(
+      vectorId,
+      textContent,
+      {
+        source: "tmdb",
+        type: "movie",
+        movieId: movie.id,
+        title: movie.title,
+        releaseDate: movie.releaseDate,
+        voteAverage: movie.voteAverage,
+        posterPath: movie.posterPath,
+        genreIds: movie.genreIds,
+        genres: genreLabels,
+      }
+    );
+  } catch (error) {
+    // Log but don't fail - graceful degradation
+    console.warn(`⚠ Failed to store movie embedding for ${movie.id}:`, error);
+  }
 }

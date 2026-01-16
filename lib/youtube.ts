@@ -71,11 +71,12 @@ function getMoodSearchQueries(moodLabel: string, moodCategory: string): {
  */
 export async function searchYouTubeVideos(
   query: string,
-  maxResults: number = 5
+  maxResults: number = 10
 ): Promise<YouTubeVideo[]> {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    throw new Error("YOUTUBE_API_KEY is not set in environment variables");
+    console.warn("⚠ YOUTUBE_API_KEY is not set in environment variables");
+    throw new Error("YOUTUBE_API_KEY is not configured");
   }
 
   const url = new URL("https://www.googleapis.com/youtube/v3/search");
@@ -89,7 +90,23 @@ export async function searchYouTubeVideos(
   try {
     const response = await fetch(url.toString());
     if (!response.ok) {
-      throw new Error(`YouTube API error: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error?.message || response.statusText;
+      
+      console.error(`✗ YouTube API error (${response.status}):`, errorMessage);
+      
+      // Provide specific error messages
+      if (response.status === 403) {
+        if (errorMessage.includes("quota")) {
+          throw new Error("YouTube API quota exceeded. Please try again later.");
+        } else if (errorMessage.includes("disabled")) {
+          throw new Error("YouTube Data API v3 is not enabled. Please enable it in Google Cloud Console.");
+        } else {
+          throw new Error("YouTube API key is invalid or restricted. Please check your API key configuration.");
+        }
+      }
+      
+      throw new Error(`YouTube API error: ${errorMessage}`);
     }
 
     const data: YouTubeSearchResponse = await response.json();
@@ -110,6 +127,7 @@ export async function searchYouTubeVideos(
 
 /**
  * Get YouTube recommendations based on mood
+ * Fetches fresh data from YouTube API (not from Pinecone cache)
  */
 export async function getYouTubeRecommendationsByMood(
   moodLabel: string,
@@ -120,38 +138,59 @@ export async function getYouTubeRecommendationsByMood(
 }> {
   const { videos: videoQueries, songs: songQueries } = getMoodSearchQueries(moodLabel, moodCategory);
 
-  // Get videos from the first query
-  const videos = await searchYouTubeVideos(videoQueries[0], 5);
+  // Fetch more results from API to ensure variety and freshness
+  // Using multiple queries to get diverse results
+  const videoPromises = videoQueries.slice(0, 3).map((query) => searchYouTubeVideos(query, 15));
+  const songPromises = songQueries.slice(0, 3).map((query) => searchYouTubeVideos(query, 15));
 
-  // Get songs from the first query
-  const songs = await searchYouTubeVideos(songQueries[0], 5);
+  const videoResults = await Promise.all(videoPromises);
+  const songResults = await Promise.all(songPromises);
 
+  // Combine results and remove duplicates
+  const videos = Array.from(
+    new Map(
+      videoResults.flat().map((v) => [v.videoId, v])
+    ).values()
+  );
+  const songs = Array.from(
+    new Map(
+      songResults.flat().map((s) => [s.videoId, s])
+    ).values()
+  );
+
+  console.log(`✓ Fetched ${videos.length} fresh videos and ${songs.length} fresh songs from YouTube API`);
   return { videos, songs };
 }
 
 /**
  * Store YouTube video/song metadata as embeddings in Pinecone
+ * Uses descriptive text (title + description), not IDs
  */
 export async function storeYouTubeVideoEmbedding(
   video: YouTubeVideo,
   type: "video" | "song"
 ): Promise<void> {
-  // Create a text representation combining title, description, and metadata
+  // Create descriptive text for embedding (NOT ID-based)
   const textContent = `${video.title}. ${video.description}. Channel: ${video.channelTitle}`;
   
   const vectorId = `youtube-${type}-${video.videoId}`;
   
-  await upsertVector(
-    vectorId,
-    textContent,
-    {
-      source: "youtube",
-      type,
-      videoId: video.videoId,
-      title: video.title,
-      channelTitle: video.channelTitle,
-      thumbnail: video.thumbnail,
-      publishedAt: video.publishedAt,
-    }
-  );
+  try {
+    await upsertVector(
+      vectorId,
+      textContent,
+      {
+        source: "youtube",
+        type,
+        videoId: video.videoId,
+        title: video.title,
+        channelTitle: video.channelTitle,
+        thumbnail: video.thumbnail,
+        publishedAt: video.publishedAt,
+      }
+    );
+  } catch (error) {
+    // Log but don't fail - graceful degradation
+    console.warn(`⚠ Failed to store ${type} embedding for ${video.videoId}:`, error);
+  }
 }

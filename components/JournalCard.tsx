@@ -16,11 +16,14 @@ export default function JournalCard({ id, heading, content, createdAt, mood, onC
 
   // Format date
   const date = new Date(createdAt);
-  const formattedDate = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
-  });
+  const isValidDate = !isNaN(date.getTime());
+  const formattedDate = isValidDate
+    ? date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+      })
+    : "No date";
 
   return (
     <div
@@ -33,7 +36,7 @@ export default function JournalCard({ id, heading, content, createdAt, mood, onC
       </div>
       <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
         <span className="text-xs text-gray-500">{formattedDate}</span>
-        {mood && (
+        {mood && mood.toLowerCase() !== "neutral" && (
           <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">
             {mood}
           </span>

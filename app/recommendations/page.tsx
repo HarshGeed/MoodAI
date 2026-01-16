@@ -73,9 +73,11 @@ export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<MoodBasedRecommendations | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   useEffect(() => {
     if (status === "authenticated" && session?.user?.id) {
+      // Always fetch fresh recommendations on page load
       fetchRecommendations();
     }
   }, [status, session]);
@@ -87,14 +89,21 @@ export default function RecommendationsPage() {
     setError(null);
 
     try {
+      // Add cache-busting timestamp to ensure fresh data
+      const timestamp = Date.now();
       const response = await fetch("/api/graphql", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
         },
+        cache: "no-store",
         body: JSON.stringify({
           query: GET_MOOD_RECOMMENDATIONS,
-          variables: { userId: session.user.id },
+          variables: { 
+            userId: session.user.id,
+            _timestamp: timestamp // Cache-busting parameter
+          },
         }),
       });
 
@@ -105,6 +114,8 @@ export default function RecommendationsPage() {
       }
 
       setRecommendations(result.data.getMoodBasedRecommendations);
+      setLastFetchTime(timestamp);
+      console.log(`✓ Fresh recommendations loaded at ${new Date(timestamp).toLocaleTimeString()}`);
     } catch (err: any) {
       setError(err.message || "An error occurred while fetching recommendations");
     } finally {
@@ -145,6 +156,40 @@ export default function RecommendationsPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
+        {/* Header with Refresh Button */}
+        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Recommendations for You</h1>
+              {lastFetchTime > 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Last updated: {new Date(lastFetchTime).toLocaleTimeString()}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={fetchRecommendations}
+              disabled={loading}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
+            >
+              <svg 
+                className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                />
+              </svg>
+              <span>{loading ? 'Loading...' : 'Refresh'}</span>
+            </button>
+          </div>
+        </div>
+
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
         {loading && (
@@ -178,7 +223,7 @@ export default function RecommendationsPage() {
         {recommendations && !loading && (
           <>
             {/* Mood Status Card */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-6 mb-8 text-white">
+            {/* <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-6 mb-8 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold mb-2">Your Current Mood</h2>
@@ -203,7 +248,7 @@ export default function RecommendationsPage() {
                   Refresh
                 </button>
               </div>
-            </div>
+            </div> */}
 
             {/* YouTube Videos Section */}
             <section className="mb-12">
